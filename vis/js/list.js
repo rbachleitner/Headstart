@@ -604,6 +604,40 @@ list.writePopup = function(pdf_url) {
     $("#pdf_iframe").show();
 };
 
+list.makeListHolderNoneOrInline = function () {
+    var list_holders = list.papers_list.selectAll("#list_holder");
+    list_holders
+    .style("display", function (d) {
+        return d.filtered_out ? "none" : "inline";
+        });
+}
+
+list.rearrangeListOnZoom = function (d, previous_zoom_node) {
+    list.reset();
+    var list_holders = list.papers_list.selectAll("#list_holder");
+    if (typeof d != 'undefined') {
+        list.makeListHolderNoneOrInline();
+
+        list_holders
+          .filter(function (x) {
+              return (headstart.use_area_uri) ? (x.area_uri != d.area_uri) : (x.area != d.title);
+          })
+          .style("display", "none");
+    }
+
+    if (previous_zoom_node !== null && typeof previous_zoom_node != 'undefined') {
+
+        if (typeof d != 'undefined') {
+            if (d3.select(previous_zoom_node).data()[0].title == d.title) {
+                return;
+            }
+        } else {
+            list.makeListHolderNoneOrInline();
+            d3.event.stopPropagation();
+            return;
+        }
+    }
+}
 
 list.populateOverlay = function(d) {   
     let this_d = d;
@@ -724,18 +758,6 @@ list.setImageForListHolder = function(d) {
             .on("click", function(d) {
                 mediator.publish("list_title_click", d);
             });
-};
-
-list.createOutlink = function(d) {
-    
-    var url = false;
-    if (headstart.url_prefix !== null) {
-        url = headstart.url_prefix + d.url;
-    } else if (typeof d.url != 'undefined') {
-        url = d.url;
-    }
-    
-    return url;
 };
 
 list.title_click = function (d) {

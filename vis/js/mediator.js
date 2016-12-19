@@ -38,6 +38,10 @@ MyMediator.prototype = {
         this.mediator.subscribe("bubble_mouseout", this.bubble_mouseout);
         this.mediator.subscribe("bubble_mouseover", this.bubble_mouseover);
         this.mediator.subscribe("bubble_click", this.bubble_click);
+        this.mediator.subscribe("bubble_onzoomout", this.bubble_onzoomout,
+                                {predicate: papers.is("infrontofbubble")});
+        this.mediator.subscribe("bubble_prepare_zoom", this.bubble_prepare_zoom);
+        this.mediator.subscribe("bubble_zoomout", this.bubble_zoomout);
 
         // bookmarks
         this.mediator.subscribe("bookmark_added", this.bookmark_added);
@@ -93,6 +97,26 @@ MyMediator.prototype = {
 
     bubble_click: function(d, bubble) {
         bubble.zoomin(d);
+    },
+
+    bubble_onzoomout: function (bubble) {
+        console.log("bubble_onzoomout");
+        bubble.zoomOut();
+        bubble.resetCircleDesign();
+        papers.zoomout();
+        headstart.initClickListenersForNav();
+    },
+
+    bubble_zoomout: function () {
+        console.log("bubble_zoomout");
+        list.reset();
+        list.makeListHolderNoneOrInline();
+    },
+
+    bubble_prepare_zoom: function (d, prev_zoom_mode) {
+        console.log("bubble_prepare_zoom");
+        papers.resetPaths();
+        list.rearrangeListOnZoom(d, prev_zoom_mode);
     },
 
     currentbubble_click: function(d) {

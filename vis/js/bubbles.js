@@ -5,7 +5,6 @@ import StateMachine from 'javascript-state-machine';
 import { headstart } from 'headstart';
 import { mediator } from 'mediator';
 import { papers} from 'papers';
-import { list } from 'list';
 import { toBack, toFront, hideSibling} from 'helpers';
 
 const bubbleTemplate = require('templates/map/bubble.handlebars');
@@ -70,10 +69,21 @@ BubblesFSM.prototype = {
         }
     },
 
+    createOutlink: function(d) {
+        var url = false;
+        if (headstart.url_prefix !== null) {
+            url = headstart.url_prefix + d.url;
+        } else if (typeof d.url != 'undefined') {
+            url = d.url;
+        }
+
+        return url;
+    },
     prepareData: function (init_data, highlight_data) {
 
         var xy_array = [];
 
+        var _this = this;
         // convert to numbers
         init_data.forEach(function (d) {
             d.x = parseFloat(d.x);
@@ -159,9 +169,7 @@ BubblesFSM.prototype = {
                     d.oa_link = "http://www.ncbi.nlm.nih.gov/pmc/articles/" + d.pmcid + "/pdf/";
                 }
             }
-            
-            d.outlink = list.createOutlink(d);
-
+            d.outlink = _this.createOutlink(d);
         });
         headstart.chart_x.domain(d3.extent(init_data, function (d) {
             return d.x;
@@ -534,41 +542,8 @@ BubblesFSM.prototype = {
 
     zoom: function (d) {
         var previous_zoom_node = headstart.current_zoom_node;
+        mediator.publish("bubble_prepare_zoom", d, previous_zoom_node);
 
-        list.reset();
-
-        papers.resetPaths();
-
-        if (typeof d != 'undefined') {
-            list.papers_list.selectAll("#list_holder")
-                    .style("display", function (d) {
-                        return d.filtered_out ? "none" : "inline";
-                    });
-
-            list.papers_list.selectAll("#list_holder")
-                    .filter(function (x) {
-                        return (headstart.use_area_uri) ? (x.area_uri != d.area_uri) : (x.area != d.title);
-                    })
-                    .style("display", "none");
-        }
-
-        if (previous_zoom_node !== null && typeof previous_zoom_node != 'undefined') {
-
-            if (typeof d != 'undefined') {
-                if (d3.select(previous_zoom_node).data()[0].title == d.title) {
-                    return;
-                }
-            } else {
-                list.papers_list.selectAll("#list_holder")
-                        .style("display", function (d) {
-                            return d.filtered_out ? "none" : "inline";
-                        });
-
-                d3.event.stopPropagation();
-                return;
-            }
-        } 
-        
         if (!headstart.is_zoomed){
             //Fix Webkit overflow behaviour
             d3.select("rect")
@@ -709,7 +684,6 @@ BubblesFSM.prototype = {
                 .attr("x", 0)
                 .attr("y", 0)
 
-        list.reset();
 
         if (headstart.current_zoom_node !== null) {
             toFront(headstart.current_zoom_node.parentNode);
@@ -727,10 +701,7 @@ BubblesFSM.prototype = {
             headstart.current_enlarged_paper = null;
         }
 
-        list.papers_list.selectAll("#list_holder")
-                .style("display", function (d) {
-                    return d.filtered_out ? "none" : "inline";
-                });
+        mediator.publish("bubble_zoomout");
 
         var n = 0;
         var t = headstart.chart.transition()
@@ -1043,14 +1014,7 @@ BubblesFSM.prototype = {
     },
 
     onzoomout: function () {
-        if(papers.is("infrontofbubble")) {
-            return;
-        }
-        
-        this.zoomOut();
-        this.resetCircleDesign();
-        papers.zoomout();
-        headstart.initClickListenersForNav();
+        mediator.publish("bubble_onzoomout", this);
     },
 
     // we only whant to be able to "zoom" when the papers are
